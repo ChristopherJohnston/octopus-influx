@@ -1,0 +1,57 @@
+#!/usr/bin/env python 
+import argparse
+import sys
+from octopus_influx import OctopusInflux
+import datetime
+import pytz
+import os
+
+def main():
+    """
+    Command line tool to import Octopus Energy usage data to an InfluxDb instance.
+    """
+    default_date = datetime.date.today() + datetime.timedelta(days=-1)
+
+    parser = argparse.ArgumentParser(
+        prog='octopus_influx',
+        description="Import octopus energy consumption data to InfluxDb.",
+        epilog=f"Example: octopus_influx --dates {default_date.isoformat()}"
+    )
+
+    parser.add_argument('--dates', type=str, metavar=f"{default_date.isoformat()}", nargs="+", help="Dates to run", default=[default_date.isoformat()])
+    
+    octopus_group = parser.add_argument_group("Octopus Energy", "Octopus Energy API inputs. Any not specified will be taken from environment variables.")
+    octopus_group.add_argument('--apikey', type=str, metavar="sk_live_xxxxxxxxxxxxx", help="Octopus API Key. If blank, environment variable OCTOPUS_API_KEY is used", default=os.environ["OCTOPUS_API_KEY"])
+    octopus_group.add_argument('--elecserial', type=str, metavar="01J0123456", help="Octopus Electricity Meter Serial Number. If blank, environment variable OCTOPUS_ELECTRICITY_SERIAL is used", default=os.environ['OCTOPUS_ELECTRICITY_SERIAL'])
+    octopus_group.add_argument('--mpan', type=str, metavar="0123456789012", help="Octopus Electricity MPAN. If blank, environment variable OCTOPUS_ELECTRICITY_MPAN is used", default=os.environ['OCTOPUS_ELECTRICITY_MPAN'])
+    octopus_group.add_argument('--gasserial', type=str, metavar="A1B00123456789", help="Octopus Gas Meter Serial Number. If blank, environment variable OCTOPUS_GAS_SERIAL is used", default=os.environ['OCTOPUS_GAS_SERIAL'])
+    octopus_group.add_argument('--mprn', type=str, metavar="123456789", help="Octopus Gas MPRN. If blank, environment variable OCTOPUS_GAS_MPRN is used", default=os.environ['OCTOPUS_GAS_MPRN'])
+
+    influx_group = parser.add_argument_group("Influx Db", "Influx Db API inputs. Any not specified will be taken from enironment variables.")
+    influx_group.add_argument('--influxdb', type=str, metavar="http://localhost:8086", help="Influx Database URL. If blank, environment variable INFLUX_DB_URL is used", default=os.environ["INFLUX_DB_URL"])
+    influx_group.add_argument('--token', type=str, metavar="xxxxxxxxxxxxxxxxXXXXXXXxxxxxx==", help="Influx API Token. If blank, environment variable INFLUX_DB_TOKEN is used", default=os.environ["INFLUX_DB_TOKEN"])
+    influx_group.add_argument('--org', type=str, metavar="myOrg", help="Influx Organisation Name. If blank, environment variable INFLUX_DB_ORG is used", default=os.environ["INFLUX_DB_ORG"])
+    influx_group.add_argument('--bucket', type=str, metavar="myBucket", help="Influx Bucket Name. If blank, environment variable INFLUX_DB_BUCKET is used", default=os.environ["INFLUX_DB_BUCKET"])
+
+    parser.add_argument('--dryrun', dest='dry_run', action='store_true', help="Enable Dry Run Mode - data is not published to influx")
+
+    parser.set_defaults(dry_run=False)
+    args = parser.parse_args()
+    
+    dates_to_run = [datetime.datetime.fromisoformat(dt).date() for dt in args.dates]
+    o = OctopusInflux(
+        influx_db_url=args.influxdb,
+        influx_api_token=args.token,
+        influx_organisation=args.org,
+        influx_bucket=args.bucket,
+        octopus_api_key=args.apikey, 
+        octopus_electricity_serial=args.elecserial,
+        octopus_electricity_mpan=args.mpan,
+        octopus_gas_serial=args.gasserial,
+        octopus_gas_mprn=args.mprn,
+        dry_run=args.dry_run
+    )
+    o.run_dates(dates_to_run)
+
+if __name__ == '__main__':
+    main()
