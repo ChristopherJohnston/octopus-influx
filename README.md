@@ -58,3 +58,7 @@ The script will use the following environment variables in place of arguments:
 * INFLUX_DB_TOKEN
 * INFLUX_DB_ORG
 * INFLUX_DB_BUCKET
+
+## Influx Db Setup
+
+See [https://docs.influxdata.com/influxdb/v2.0/install/](https://docs.influxdata.com/influxdb/v2.0/install/)
